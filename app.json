@@ -50,7 +50,7 @@
     "formation": {
         "worker": {
             "quantity": 1,
-            "size": "2x"
+            "size": "Standard-2X"
         }
     },
     "buildpacks": [
@@ -62,4 +62,5 @@
         }
     ],
     "stack": "heroku-22"
+
 }
