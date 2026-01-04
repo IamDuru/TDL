@@ -190,8 +190,8 @@ async def insta_link_handler(client, message: Message):
     if not match:
         return
 
-    insta_url = match.group(1)
-    status_msg = await message.reply_text("🔎 Processing your link...", quote=True)
+    insta_url = match.group(0)
+    status_msg = await message.reply_text("🔎 Processing your link...")
 
     async with aiohttp.ClientSession() as session:
         video_url = await fetch_reel_url(session, insta_url)
