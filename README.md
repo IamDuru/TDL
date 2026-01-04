@@ -5,7 +5,7 @@ A powerful Telegram bot to download Instagram Reels and extract audio.
 ## 🚀 Deployment
 
 ### 1. One-Click Deploy
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=YOUR_GITHUB_REPO_LINK)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/IamDuru/TDL)
 
 ### 2. Manual Setup
 1. Clone the repo.
@@ -24,3 +24,4 @@ A powerful Telegram bot to download Instagram Reels and extract audio.
 - FFmpeg (for audio extraction)
 - MongoDB Database
 - Heroku-22 Stack
+
