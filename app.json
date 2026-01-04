@@ -1,0 +1,65 @@
+{
+    "name": "Shiv Insta DL Bot",
+    "description": "Instagram Reels Downloader Bot for Telegram.",
+    "repository": "https://github.com/yourusername/your-repo",
+    "keywords": [
+        "telegram",
+        "bot",
+        "instagram",
+        "downloader",
+        "reels"
+    ],
+    "env": {
+        "API_ID": {
+            "description": "Your Telegram API ID",
+            "required": true
+        },
+        "API_HASH": {
+            "description": "Your Telegram API HASH",
+            "required": true
+        },
+        "BOT_TOKEN": {
+            "description": "Your Telegram Bot Token",
+            "required": true
+        },
+        "DB_URL": {
+            "description": "Your MongoDB URL",
+            "required": true
+        },
+        "OWNER_ID": {
+            "description": "The User ID of the bot owner",
+            "required": true
+        },
+        "DIRECT_FSUB_ID": {
+            "description": "Channel ID for direct fsub (Optional)",
+            "required": false
+        },
+        "REQUEST_FSUB_ID": {
+            "description": "Channel ID for request fsub (Optional)",
+            "required": false
+        },
+        "SUPPORT_GROUP": {
+            "description": "Link to support group",
+            "required": false
+        },
+        "SUPPORT_CHANNEL": {
+            "description": "Link to support channel",
+            "required": false
+        }
+    },
+    "formation": {
+        "worker": {
+            "quantity": 1,
+            "size": "2x"
+        }
+    },
+    "buildpacks": [
+        {
+            "url": "heroku/python"
+        },
+        {
+            "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+        }
+    ],
+    "stack": "heroku-22"
+}

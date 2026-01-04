@@ -1,0 +1,5 @@
+kurigram
+motor
+aiohttp
+yt-dlp
+tgcrypto
