@@ -114,8 +114,8 @@ async def start_handler(client, message: Message):
     
     me = await client.get_me()
     start_buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Add me to your Group", url=f"https://t.me/{me.username}?startgroup=true")],
-        [InlineKeyboardButton("🚀 𝗨𝗽𝗱𝗮𝘁𝗲", url=support_ch), InlineKeyboardButton("💬 𝗦𝘂𝗽𝗽𝗼𝗿𝘁", url=support_gc)]
+        [InlineKeyboardButton("✙ ᴀᴅᴅ ᴍᴇ ᴛᴏ ʏᴏᴜʀ ɢʀᴏᴜᴘ ✙", url=f"https://t.me/{me.username}?startgroup=true")],
+        [InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch), InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·", url=support_gc)]
     ])
 
     welcome_text = (
@@ -206,7 +206,7 @@ async def insta_link_handler(client, message: Message):
             video_urls_cache[str(message.id)] = video_url
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("Download Audio 🎵", callback_data=f"audio_{message.id}")],
-                [InlineKeyboardButton("🚀 𝗨𝗽𝗱𝗮𝘁𝗲", url=support_ch), InlineKeyboardButton("💬 𝗦𝘂𝗽𝗽𝗼𝗿𝘁", url=support_gc)]
+                [InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch), InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·�", url=support_gc)]
             ])
 
             try:
@@ -263,15 +263,15 @@ async def audio_callback_handler(client, callback_query):
 
         await status_msg.edit_text("📤 Sending audio...")
         keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🚀 𝗨𝗽𝗱𝗮𝘁𝗲", url=support_ch),
-            InlineKeyboardButton("💬 𝗦𝘂𝗽𝗽𝗼𝗿𝘁", url=support_gc)
+            InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch),
+            InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·", url=support_gc)
         ]])
         await client.send_audio(
             chat_id=callback_query.message.chat.id,
             audio=audio_path,
             title=title,
-            performer="Instagram",
-            caption="✅ Audio extracted successfully!",
+            performer="@InstaRdownloadbot",
+            #caption="✅ Audio extracted successfully!",
             reply_markup=keyboard
         )
 
@@ -354,3 +354,4 @@ async def gcast_command(client, message):
 if __name__ == "__main__":
     logger.info("Bot starting...")
     app.run()
+
