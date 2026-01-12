@@ -25,6 +25,7 @@ owner = list(map(int, os.getenv("OWNER_ID", "7706682472").split()))
 
 direct_fsub_id = os.getenv("DIRECT_FSUB_ID", "")
 request_fsub_id = os.getenv("REQUEST_FSUB_ID", "")
+auto_delete_time = int(os.getenv("AUTO_DELETE_TIME", "300")) # 5mi
 
 DURGESH_API = "https://insta-dl-api.durgesh-024.workers.dev/?url="
 HAZEX_API = "https://insta-dl.hazex.workers.dev/?url="
@@ -174,6 +175,13 @@ async def check_fsub(client, message):
     )
     return False
 
+async def auto_delete(message, delay):
+    await asyncio.sleep(delay)
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
 @app.on_callback_query(filters.regex("check_sub"))
 async def check_sub_callback(client, callback_query):
     if await check_fsub(client, callback_query.message):
@@ -210,12 +218,13 @@ async def insta_link_handler(client, message: Message):
             ])
 
             try:
-                await client.send_video(
+                sent_video = await client.send_video(
                     chat_id=message.chat.id,
                     video=video_url,
                     reply_to_message_id=message.id,
                     reply_markup=keyboard
                 )
+                asyncio.create_task(auto_delete(sent_video, auto_delete_time))
             except Exception:
                 await status_msg.edit_text("⏳ Uploading video...")
                 file_path = f"downloads/{message.id}.mp4"
@@ -224,12 +233,13 @@ async def insta_link_handler(client, message: Message):
                         content = await resp.read()
                         with open(file_path, "wb") as f:
                             f.write(content)
-                        await client.send_video(
+                        sent_video = await client.send_video(
                             chat_id=message.chat.id,
                             video=file_path,
                             reply_to_message_id=message.id,
                             reply_markup=keyboard
                         )
+                        asyncio.create_task(auto_delete(sent_video, auto_delete_time))
                         if os.path.exists(file_path):
                             os.remove(file_path)
                     else:
@@ -266,7 +276,7 @@ async def audio_callback_handler(client, callback_query):
             InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch),
             InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·", url=support_gc)
         ]])
-        await client.send_audio(
+        sent_audio = await client.send_audio(
             chat_id=callback_query.message.chat.id,
             audio=audio_path,
             title=title,
@@ -274,6 +284,7 @@ async def audio_callback_handler(client, callback_query):
             #caption="✅ Audio extracted successfully!",
             reply_markup=keyboard
         )
+        asyncio.create_task(auto_delete(sent_audio, auto_delete_time))
 
         if os.path.exists(audio_path):
             os.remove(audio_path)
@@ -354,4 +365,3 @@ async def gcast_command(client, message):
 if __name__ == "__main__":
     logger.info("Bot starting...")
     app.run()
-
