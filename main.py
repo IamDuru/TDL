@@ -1,6 +1,6 @@
 import os, re, aiohttp, asyncio, yt_dlp, logging
 from pyrogram import Client, filters, enums
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, ReplyParameters
 from pyrogram.errors import FloodWait, UserIsBlocked, PeerIdInvalid, MessageNotModified
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -14,10 +14,7 @@ logger = logging.getLogger(__name__)
 api_id = int(os.getenv("API_ID", 0))
 api_hash = os.getenv("API_HASH", "")
 bot_token = os.getenv("BOT_TOKEN", "")
-db_url = os.getenv(
-    "DB_URL",
-    "",
-)
+db_url = os.getenv("DB_URL", "")
 db_name = "InstaDLBot"
 support_gc = os.getenv("SUPPORT_GROUP", "")
 support_ch = os.getenv("SUPPORT_CHANNEL", "")
@@ -25,7 +22,7 @@ owner = list(map(int, os.getenv("OWNER_ID", "7706682472").split()))
 
 direct_fsub_id = os.getenv("DIRECT_FSUB_ID", "")
 request_fsub_id = os.getenv("REQUEST_FSUB_ID", "")
-auto_delete_time = int(os.getenv("AUTO_DELETE_TIME", "300")) # 5mi
+auto_delete_time = int(os.getenv("AUTO_DELETE_TIME", "300")) #5mi
 
 DURGESH_API = "https://insta-dl-api.durgesh-024.workers.dev/?url="
 HAZEX_API = "https://insta-dl.hazex.workers.dev/?url="
@@ -87,21 +84,24 @@ app = Client("my_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 INSTA_REGEX = r"^(?:https?://)?(?:www\.)?(?:instagram\.com|instagr\.am)/(?:p|reel|tv)/([^/?#&]+).*"
 
 async def fetch_reel_url(session, insta_url):
+    timeout = aiohttp.ClientTimeout(total=15)
     try:
         logger.info(f"Trying Durgesh API for: {insta_url}")
-        async with session.get(f"{DURGESH_API}{insta_url}") as resp:
-            data = await resp.json()
-            if data.get("status") == "success" and data.get("video"):
-                return data["video"]
+        async with session.get(f"{DURGESH_API}{insta_url}", timeout=timeout) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                if data.get("status") == "success" and data.get("video"):
+                    return data["video"]
     except Exception as e:
         logger.error(f"Durgesh API failed: {e}")
 
     try:
         logger.info(f"Falling back to Hazex API for: {insta_url}")
-        async with session.get(f"{HAZEX_API}{insta_url}") as resp:
-            data = await resp.json()
-            if not data.get("error") and "result" in data:
-                return data["result"]["url"]
+        async with session.get(f"{HAZEX_API}{insta_url}", timeout=timeout) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                if not data.get("error") and "result" in data:
+                    return data["result"]["url"]
     except Exception as e:
         logger.error(f"Hazex API failed: {e}")
 
@@ -166,7 +166,7 @@ async def check_fsub(client, message):
         except Exception:
             pass
             
-    buttons.append([InlineKeyboardButton("� Verify Subscription", callback_data="check_sub")])
+    buttons.append([InlineKeyboardButton("🔄 Verify Subscription", callback_data="check_sub")])
     
     await message.reply_text(
         "<b>⚠️ Access Denied!</b>\n\nYou must join our channels to use this bot.",
@@ -185,7 +185,10 @@ async def auto_delete(message, delay):
 @app.on_callback_query(filters.regex("check_sub"))
 async def check_sub_callback(client, callback_query):
     if await check_fsub(client, callback_query.message):
-        await callback_query.message.delete()
+        try:
+            await callback_query.message.delete()
+        except:
+            pass
         await callback_query.message.reply_text("✅ Thank you for joining! You can now use the bot.")
     else:
         await callback_query.answer("❌ You haven't joined yet!", show_alert=True)
@@ -214,14 +217,14 @@ async def insta_link_handler(client, message: Message):
             video_urls_cache[str(message.id)] = video_url
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("Download Audio 🎵", callback_data=f"audio_{message.id}")],
-                [InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch), InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·�", url=support_gc)]
+                [InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch), InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·", url=support_gc)]
             ])
 
             try:
                 sent_video = await client.send_video(
                     chat_id=message.chat.id,
                     video=video_url,
-                    reply_to_message_id=message.id,
+                    reply_parameters=ReplyParameters(message_id=message.id),
                     reply_markup=keyboard
                 )
                 asyncio.create_task(auto_delete(sent_video, auto_delete_time))
@@ -236,7 +239,7 @@ async def insta_link_handler(client, message: Message):
                         sent_video = await client.send_video(
                             chat_id=message.chat.id,
                             video=file_path,
-                            reply_to_message_id=message.id,
+                            reply_parameters=ReplyParameters(message_id=message.id),
                             reply_markup=keyboard
                         )
                         asyncio.create_task(auto_delete(sent_video, auto_delete_time))
@@ -281,7 +284,6 @@ async def audio_callback_handler(client, callback_query):
             audio=audio_path,
             title=title,
             performer="@InstaRdownloadbot",
-            #caption="✅ Audio extracted successfully!",
             reply_markup=keyboard
         )
         asyncio.create_task(auto_delete(sent_audio, auto_delete_time))
