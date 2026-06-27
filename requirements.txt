@@ -4,3 +4,4 @@ aiohttp
 yt-dlp
 tgcrypto
 bs4
+requests
