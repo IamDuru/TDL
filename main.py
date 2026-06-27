@@ -1,4 +1,5 @@
-import os, re, aiohttp, asyncio, yt_dlp, logging
+import os, re, aiohttp, asyncio, yt_dlp, logging, uuid, requests
+from bs4 import BeautifulSoup
 from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, ReplyParameters
 from pyrogram.errors import FloodWait, UserIsBlocked, PeerIdInvalid, MessageNotModified
@@ -23,9 +24,6 @@ owner = list(map(int, os.getenv("OWNER_ID", "7706682472").split()))
 direct_fsub_id = os.getenv("DIRECT_FSUB_ID", "")
 request_fsub_id = os.getenv("REQUEST_FSUB_ID", "")
 auto_delete_time = int(os.getenv("AUTO_DELETE_TIME", "300")) #5mi
-
-DURGESH_API = "https://insta-dl-api.durgesh-024.workers.dev/?url="
-HAZEX_API = "https://insta-dl.hazex.workers.dev/?url="
 
 YDL_OPTS = {
     'format': 'bestaudio/best',
@@ -83,29 +81,23 @@ app = Client("my_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
 INSTA_REGEX = r"^(?:https?://)?(?:www\.)?(?:instagram\.com|instagr\.am)/(?:p|reel|tv)/([^/?#&]+).*"
 
-async def fetch_reel_url(session, insta_url):
-    timeout = aiohttp.ClientTimeout(total=15)
+def get_download_url(instagram_url):
     try:
-        logger.info(f"Trying Durgesh API for: {insta_url}")
-        async with session.get(f"{DURGESH_API}{insta_url}", timeout=timeout) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                if data.get("status") == "success" and data.get("video"):
-                    return data["video"]
-    except Exception as e:
-        logger.error(f"Durgesh API failed: {e}")
+        r = requests.post(
+            "https://savereels.io/api/ajaxSearch",
+            headers={
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://savereels.io/en/instagram-reels-downloader",
+            },
+            data={"q": instagram_url, "w": "", "v": "v2", "lang": "en", "cftoken": ""},
+            timeout=20,
+        ).json()
 
-    try:
-        logger.info(f"Falling back to Hazex API for: {insta_url}")
-        async with session.get(f"{HAZEX_API}{insta_url}", timeout=timeout) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                if not data.get("error") and "result" in data:
-                    return data["result"]["url"]
+        a = BeautifulSoup(r["data"], "html.parser").select_one("a[href*='dl.snapcdn.app/get']")
+        return a["href"] if a else None
     except Exception as e:
-        logger.error(f"Hazex API failed: {e}")
-
-    return None
+        logger.error(f"get_download_url failed: {e}")
+        return None
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message: Message):
@@ -205,52 +197,45 @@ async def insta_link_handler(client, message: Message):
     insta_url = match.group(0)
     status_msg = await message.reply_text("🔎 Processing your link...")
 
-    async with aiohttp.ClientSession() as session:
-        video_url = await fetch_reel_url(session, insta_url)
+    video_url = await asyncio.to_thread(get_download_url, insta_url)
 
-        if not video_url:
-            await status_msg.edit_text("❌ Sorry, I couldn't download this reel. Both APIs failed.")
-            return
+    if not video_url:
+        await status_msg.edit_text("❌ Sorry, I couldn't download this reel. The API failed.")
+        return
 
-        try:
-            await status_msg.edit_text("⏳ Sending video...")
-            video_urls_cache[str(message.id)] = video_url
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("Download Audio 🎵", callback_data=f"audio_{message.id}")],
-                [InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch), InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·", url=support_gc)]
-            ])
+    file_path = f"downloads/{uuid.uuid4().hex}.mp4"
+    try:
+        await status_msg.edit_text("⏳ Downloading video...")
+        video_urls_cache[str(message.id)] = video_url
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("Download Audio 🎵", callback_data=f"audio_{message.id}")],
+            [InlineKeyboardButton("· ᴜᴘᴅᴀᴛᴇ ·", url=support_ch), InlineKeyboardButton("· sᴜᴘᴘᴏʀᴛ ·", url=support_gc)]
+        ])
 
-            try:
-                sent_video = await client.send_video(
-                    chat_id=message.chat.id,
-                    video=video_url,
-                    reply_parameters=ReplyParameters(message_id=message.id),
-                    reply_markup=keyboard
-                )
-                asyncio.create_task(auto_delete(sent_video, auto_delete_time))
-            except Exception:
-                await status_msg.edit_text("⏳ Uploading video...")
-                file_path = f"downloads/{message.id}.mp4"
-                async with session.get(video_url) as resp:
-                    if resp.status == 200:
-                        content = await resp.read()
-                        with open(file_path, "wb") as f:
-                            f.write(content)
-                        sent_video = await client.send_video(
-                            chat_id=message.chat.id,
-                            video=file_path,
-                            reply_parameters=ReplyParameters(message_id=message.id),
-                            reply_markup=keyboard
-                        )
-                        asyncio.create_task(auto_delete(sent_video, auto_delete_time))
-                        if os.path.exists(file_path):
-                            os.remove(file_path)
-                    else:
-                        raise Exception("Failed to download video locally")
-            await status_msg.delete()
-        except Exception as e:
-            logger.error(f"Error sending video: {e}")
-            await status_msg.edit_text(f"❌ Error sending video: {str(e)}")
+        async with aiohttp.ClientSession() as session:
+            async with session.get(video_url) as resp:
+                if resp.status == 200:
+                    content = await resp.read()
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+                else:
+                    raise Exception("Failed to download video locally")
+
+        await status_msg.edit_text("⏳ Uploading video...")
+        sent_video = await client.send_video(
+            chat_id=message.chat.id,
+            video=file_path,
+            reply_parameters=ReplyParameters(message_id=message.id),
+            reply_markup=keyboard
+        )
+        asyncio.create_task(auto_delete(sent_video, auto_delete_time))
+        await status_msg.delete()
+    except Exception as e:
+        logger.error(f"Error sending video: {e}")
+        await status_msg.edit_text(f"❌ Error sending video: {str(e)}")
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 @app.on_callback_query(filters.regex(r"^audio_(\d+)$"))
 async def audio_callback_handler(client, callback_query):
