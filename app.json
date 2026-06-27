@@ -1,7 +1,6 @@
 {
     "name": "Shiv Insta DL Bot",
     "description": "Instagram Reels Downloader Bot for Telegram.",
-    "repository": "https://github.com/yourusername/your-repo",
     "keywords": [
         "telegram",
         "bot",
@@ -61,6 +60,6 @@
             "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
         }
     ],
-    "stack": "heroku-22"
+    "stack": "heroku-24"
 
 }
